@@ -175,9 +175,16 @@ function renderAvailable() {
     const tr = document.createElement("tr");
     if (i === 0) tr.className = "best-pick";
     const statusClass = p.injury_status && p.injury_status !== "ACTIVE" ? "injured" : "";
+    const key = normName(p.name);
+    const caution = CAUTION_PLAYERS[key];
+    const marker = caution
+      ? `<span class="caution" title="${caution}">⚠️</span> `
+      : ALL_TARGETS.has(key)
+        ? '<span title="On my draft plan">⭐</span> '
+        : "";
     tr.innerHTML = `
       <td>${p.rank}</td>
-      <td>${p.name}</td>
+      <td>${marker}${p.name}</td>
       <td>${p.position}</td>
       <td>${p.pro_team}</td>
       <td>${p.projected_points.toFixed(1)}</td>
@@ -214,6 +221,8 @@ function renderPicks(draft) {
   document.getElementById("my-pos-counts").textContent = Object.entries(counts)
     .map(([pos, n]) => `${pos}×${n}`)
     .join(" · ");
+
+  renderPlan(myPicks.length);
 
   const recentList = document.getElementById("recent-picks");
   recentList.innerHTML = "";
@@ -269,6 +278,66 @@ function startDraftPolling() {
 }
 
 const MY_TEAM_DEFAULT = "bluphi";
+
+// Stephen's 2026 draft guide: 10-team snake, pick 1.01, full PPR.
+// Stages are keyed by how many picks my team has already made.
+const PLAN_STAGES = [
+  { after: 0, label: "Round 1 · Pick 1", objective: "Elite RB1 — Gibbs if available, else Bijan. No QB/TE/D/ST/K here.",
+    targets: ["Jahmyr Gibbs", "Bijan Robinson", "Ja'Marr Chase", "Puka Nacua", "Jaxon Smith-Njigba"] },
+  { after: 1, label: "Rounds 2–3 · Picks 20–21", objective: "One elite TE + one elite WR/RB. Only ONE of McBride/Bowers. No QB.",
+    targets: ["Trey McBride", "Nico Collins", "Brock Bowers", "A.J. Brown", "Jeremiyah Love", "Saquon Barkley", "Rashee Rice", "Derrick Henry"] },
+  { after: 3, label: "Rounds 4–5 · Picks 40–41", objective: "Starting WR + RB. Loveland only if no TE yet. Josh Allen only if he falls here.",
+    targets: ["Ladd McConkey", "Cam Skattebo", "Tee Higgins", "Davante Adams", "Jaylen Waddle", "Colston Loveland"] },
+  { after: 5, label: "Rounds 6–7 · Picks 60–61", objective: "FLEX + upside depth. Fill FLEX with RB/WR before any QB.",
+    targets: ["TreVeyon Henderson", "Rome Odunze", "Luther Burden III", "Carnell Tate"] },
+  { after: 7, label: "Rounds 8–9 · Picks 80–81", objective: "QB value + best FLEX. One QB only.",
+    targets: ["Justin Herbert", "Caleb Williams", "Dak Prescott", "Patrick Mahomes", "Brock Purdy"] },
+  { after: 9, label: "Rounds 10–13 · Picks 100–121", objective: "High-upside bench RBs/WRs. No 2nd QB, TE, D/ST, or K.",
+    targets: ["Parker Washington", "Matthew Golden", "Rashid Shaheed", "Rachaad White", "Blake Corum", "J.K. Dobbins", "Tank Bigsby", "Keaton Mitchell"] },
+  { after: 13, label: "Rounds 14–16 · Picks 140–160", objective: "D/ST (Week 1 matchup, pass rush) and kicker (good offense). Now, not earlier.",
+    targets: [] },
+];
+
+const CAUTION_PLAYERS = {
+  "josh jacobs": "verify current status; only at a big discount",
+  "christian mccaffrey": "elite ceiling, but riskier than Gibbs",
+  "derrick henry": "age/workload risk — right price only",
+};
+
+function normName(name) {
+  return name.toLowerCase().replace(/[.'']/g, "").trim();
+}
+
+const ALL_TARGETS = new Set(
+  PLAN_STAGES.flatMap((s) => s.targets).map(normName)
+);
+
+function currentStage(myPickCount) {
+  let stage = PLAN_STAGES[0];
+  for (const s of PLAN_STAGES) {
+    if (myPickCount >= s.after) stage = s;
+  }
+  return stage;
+}
+
+function renderPlan(myPickCount) {
+  const stage = currentStage(myPickCount);
+  const panel = document.getElementById("plan-panel");
+  const targetItems = stage.targets
+    .map((name) => {
+      const key = normName(name);
+      const p = state.players.find((pl) => normName(pl.name) === key);
+      const gone = p ? state.draftedIds.has(p.player_id) : false;
+      const rank = p ? ` · #${p.rank}` : "";
+      return `<li class="${gone ? "target-gone" : ""}">${name}${rank}</li>`;
+    })
+    .join("");
+  panel.innerHTML = `
+    <div class="plan-stage">${stage.label}</div>
+    <div class="plan-objective">${stage.objective}</div>
+    ${targetItems ? `<ul class="plan-targets">${targetItems}</ul>` : ""}
+  `;
+}
 
 function savedTeamKey() {
   return `ff-my-team-${state.leagueId}-${state.year}`;
