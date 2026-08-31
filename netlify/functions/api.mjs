@@ -171,11 +171,14 @@ function mapPlayers(data, year) {
 function mapDraft(data) {
   const names = new Map((data.teams ?? []).map((t) => [t.id, teamName(t)]));
   const detail = data.draftDetail ?? {};
+  // Before the draft starts, ESPN pre-populates every slot as a
+  // placeholder pick with playerId -1 (or 0); only count real picks.
+  const picks = (detail.picks ?? []).filter((p) => (p.playerId ?? 0) > 0);
   return {
     drafted: detail.drafted ?? false,
-    in_progress: (detail.picks ?? []).length > 0 && !(detail.drafted ?? false),
+    in_progress: picks.length > 0 && !(detail.drafted ?? false),
     teams: Object.fromEntries(names),
-    picks: (detail.picks ?? []).map((p) => ({
+    picks: picks.map((p) => ({
       player_id: p.playerId,
       team_id: p.teamId,
       team_name: names.get(p.teamId) ?? `Team ${p.teamId}`,

@@ -235,6 +235,7 @@ def draft():
             "keeper": p.get("keeper", False),
         }
         for p in detail.get("picks", [])
+        if (p.get("playerId") or 0) > 0
     ]
     return jsonify(
         {
