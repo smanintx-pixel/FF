@@ -248,6 +248,12 @@ function startDraftPolling() {
   }, 10000);
 }
 
+const MY_TEAM_DEFAULT = "bluphi";
+
+function savedTeamKey() {
+  return `ff-my-team-${state.leagueId}-${state.year}`;
+}
+
 async function enterDraftTab() {
   clearError();
   try {
@@ -260,6 +266,17 @@ async function enterDraftTab() {
         opt.textContent = t.team_name;
         sel.appendChild(opt);
       });
+      let saved = null;
+      try {
+        saved = localStorage.getItem(savedTeamKey());
+      } catch (err) {}
+      const options = [...sel.options];
+      const match =
+        (saved && options.find((o) => o.value === saved)) ||
+        options.find((o) =>
+          o.textContent.toLowerCase().includes(MY_TEAM_DEFAULT)
+        );
+      if (match) sel.value = match.value;
     }
     await refreshDraft();
     startDraftPolling();
@@ -298,7 +315,10 @@ document.getElementById("draft-refresh").addEventListener("click", async () => {
   }
 });
 
-document.getElementById("draft-team-select").addEventListener("change", () => {
+document.getElementById("draft-team-select").addEventListener("change", (e) => {
+  try {
+    localStorage.setItem(savedTeamKey(), e.target.value);
+  } catch (err) {}
   refreshDraft().catch((err) => showError(err.message));
 });
 
