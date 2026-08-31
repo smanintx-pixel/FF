@@ -15,11 +15,25 @@ const errorBox = document.getElementById("error");
 function showError(msg) {
   errorBox.textContent = msg;
   errorBox.classList.remove("hidden");
+  if (/private/i.test(msg)) {
+    document.getElementById("settings-panel").classList.remove("hidden");
+  }
 }
 
 function clearError() {
   errorBox.classList.add("hidden");
   errorBox.textContent = "";
+}
+
+function getCreds() {
+  try {
+    return {
+      s2: localStorage.getItem("ff-espn-s2") || "",
+      swid: localStorage.getItem("ff-espn-swid") || "",
+    };
+  } catch (err) {
+    return { s2: "", swid: "" };
+  }
 }
 
 async function apiGet(path, params = {}) {
@@ -29,7 +43,13 @@ async function apiGet(path, params = {}) {
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   }
-  const res = await fetch(url);
+  const headers = {};
+  const creds = getCreds();
+  if (creds.s2 && creds.swid) {
+    headers["x-espn-s2"] = creds.s2;
+    headers["x-swid"] = creds.swid;
+  }
+  const res = await fetch(url, { headers });
   const body = await res.json();
   if (!res.ok) {
     throw new Error(body.error || `Request failed (${res.status})`);
@@ -320,6 +340,40 @@ document.getElementById("draft-team-select").addEventListener("change", (e) => {
     localStorage.setItem(savedTeamKey(), e.target.value);
   } catch (err) {}
   refreshDraft().catch((err) => showError(err.message));
+});
+
+document.getElementById("settings-toggle").addEventListener("click", () => {
+  document.getElementById("settings-panel").classList.toggle("hidden");
+});
+
+document.getElementById("creds-save").addEventListener("click", () => {
+  const s2 = document.getElementById("espn-s2").value.trim();
+  const swid = document.getElementById("espn-swid").value.trim();
+  const status = document.getElementById("creds-status");
+  if (!s2 || !swid) {
+    status.textContent = "Both values are required.";
+    return;
+  }
+  try {
+    localStorage.setItem("ff-espn-s2", s2);
+    localStorage.setItem("ff-espn-swid", swid);
+  } catch (err) {
+    status.textContent = "Could not save (browser storage unavailable).";
+    return;
+  }
+  status.textContent = "Saved — reloading league…";
+  document.getElementById("settings-panel").classList.add("hidden");
+  refreshAll();
+});
+
+document.getElementById("creds-clear").addEventListener("click", () => {
+  try {
+    localStorage.removeItem("ff-espn-s2");
+    localStorage.removeItem("ff-espn-swid");
+  } catch (err) {}
+  document.getElementById("espn-s2").value = "";
+  document.getElementById("espn-swid").value = "";
+  document.getElementById("creds-status").textContent = "Cleared.";
 });
 
 document.querySelectorAll(".pos-btn").forEach((btn) => {

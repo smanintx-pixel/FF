@@ -13,8 +13,25 @@
       <label>League ID <input type="number" id="league-id" value="1676746"></label>
       <label>Year <input type="number" id="year" value="2026"></label>
       <button type="submit">Load</button>
+      <button type="button" id="settings-toggle">ESPN Login</button>
     </form>
   </header>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <p class="settings-hint">
+      For private leagues: while logged in at fantasy.espn.com, open DevTools
+      (F12) → Application → Cookies → fantasy.espn.com, then copy these two
+      values. They are stored only in this browser and sent directly with
+      your requests — never saved on the server.
+    </p>
+    <label>espn_s2 <input type="password" id="espn-s2" autocomplete="off"></label>
+    <label>SWID <input type="password" id="espn-swid" autocomplete="off" placeholder="{...}"></label>
+    <div class="settings-actions">
+      <button id="creds-save">Save &amp; reload</button>
+      <button id="creds-clear">Clear</button>
+      <span id="creds-status" class="settings-hint"></span>
+    </div>
+  </div>
 
   <nav class="tabs">
     <button class="tab-btn active" data-tab="standings">Standings</button>

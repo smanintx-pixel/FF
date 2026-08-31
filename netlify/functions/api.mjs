@@ -26,14 +26,16 @@ function json(body, status = 200) {
   });
 }
 
-async function fetchLeague(leagueId, year, views, extraHeaders = {}) {
+async function fetchLeagueBase(leagueId, year, views, extraHeaders = {}) {
   const url = new URL(
     `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}/segments/0/leagues/${leagueId}`
   );
   for (const view of views) url.searchParams.append("view", view);
   const headers = { ...extraHeaders };
-  const { ESPN_S2, SWID } = process.env;
-  if (ESPN_S2 && SWID) headers.cookie = `espn_s2=${ESPN_S2}; SWID=${SWID}`;
+  if (!headers.cookie) {
+    const { ESPN_S2, SWID } = process.env;
+    if (ESPN_S2 && SWID) headers.cookie = `espn_s2=${ESPN_S2}; SWID=${SWID}`;
+  }
   const res = await fetch(url, { headers });
   if (res.status === 401) {
     const hint = headers.cookie
@@ -190,6 +192,16 @@ export default async function handler(request, context) {
   const endpoint = context.params?.endpoint ?? url.pathname.split("/").pop();
   const leagueId = parseInt(url.searchParams.get("league_id") ?? DEFAULT_LEAGUE_ID, 10);
   const year = parseInt(url.searchParams.get("year") ?? DEFAULT_YEAR, 10);
+
+  // Per-visitor ESPN credentials sent by the frontend take priority over
+  // any server-configured env vars.
+  const s2 = request.headers.get("x-espn-s2");
+  const swid = request.headers.get("x-swid");
+  const creds = {};
+  if (s2 && swid) creds.cookie = `espn_s2=${s2}; SWID=${swid}`;
+
+  const fetchLeague = (lid, yr, views, extra = {}) =>
+    fetchLeagueBase(lid, yr, views, { ...creds, ...extra });
 
   try {
     switch (endpoint) {

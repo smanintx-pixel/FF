@@ -19,13 +19,12 @@ _league_cache = {}
 
 
 def get_league(league_id: int, year: int) -> League:
-    key = (league_id, year)
+    espn_s2 = request.headers.get("X-Espn-S2") or os.environ.get("ESPN_S2")
+    swid = request.headers.get("X-Swid") or os.environ.get("SWID")
+    key = (league_id, year, espn_s2, swid)
     if key not in _league_cache:
         _league_cache[key] = League(
-            league_id=league_id,
-            year=year,
-            espn_s2=os.environ.get("ESPN_S2"),
-            swid=os.environ.get("SWID"),
+            league_id=league_id, year=year, espn_s2=espn_s2, swid=swid
         )
     return _league_cache[key]
 
