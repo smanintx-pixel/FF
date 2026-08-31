@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fantasy Football Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <h1>Fantasy Football Dashboard</h1>
     <form id="league-form">
-      <label>League ID <input type="number" id="league-id" value="{{ default_league_id }}"></label>
-      <label>Year <input type="number" id="year" value="{{ default_year }}"></label>
+      <label>League ID <input type="number" id="league-id" value="1676746"></label>
+      <label>Year <input type="number" id="year" value="2026"></label>
       <button type="submit">Load</button>
     </form>
   </header>
@@ -59,6 +59,6 @@
     </section>
   </main>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="app.js"></script>
 </body>
 </html>

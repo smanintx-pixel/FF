@@ -6,9 +6,9 @@ from espn_api.requests.espn_requests import (
     ESPNInvalidLeague,
     ESPNUnknownError,
 )
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="public", static_url_path="")
 
 DEFAULT_LEAGUE_ID = int(os.environ.get("FF_LEAGUE_ID", "1676746"))
 DEFAULT_YEAR = int(os.environ.get("FF_YEAR", "2026"))
@@ -46,9 +46,7 @@ def handle_unknown_error(err):
 
 @app.route("/")
 def index():
-    return render_template(
-        "index.html", default_league_id=DEFAULT_LEAGUE_ID, default_year=DEFAULT_YEAR
-    )
+    return app.send_static_file("index.html")
 
 
 @app.route("/api/meta")

@@ -1,10 +1,24 @@
 # FF — Fantasy Football Dashboard
 
-A small Flask app that shows standings, weekly matchups, and team rosters
-for a public ESPN Fantasy Football league, using the
-[espn-api](https://github.com/cwendt94/espn-api) library.
+A small web dashboard showing standings, weekly matchups, and team rosters
+for a public ESPN Fantasy Football league. Two interchangeable backends
+serve the same `public/` frontend:
 
-## Setup
+- **Flask** (`app.py`) for running locally, built on
+  [espn-api](https://github.com/cwendt94/espn-api)
+- **Netlify Functions** (`netlify/functions/api.mjs`) for hosting on
+  Netlify, calling ESPN's fantasy v3 API directly
+
+## Deploy to Netlify
+
+In the Netlify dashboard: **Add new site → Import an existing project →
+GitHub → this repo**. The included `netlify.toml` configures everything
+(publish `public/`, functions in `netlify/functions/`) — no build command
+or environment variables needed. Every push then auto-deploys.
+
+## Run locally (Flask)
+
+### Setup
 
 ```bash
 python3 -m venv .venv
@@ -12,7 +26,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run
+### Run
 
 ```bash
 python app.py
