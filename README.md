@@ -38,5 +38,14 @@ editing the League ID / Year fields in the page and clicking Load).
 
 ## Private leagues
 
-This app currently only supports public leagues. To add a private league
-you'd pass `espn_s2` / `swid` cookies into `League(...)` in `app.py`.
+Both backends read the `ESPN_S2` and `SWID` environment variables and
+send them as cookies to ESPN. Get the values from your browser while
+logged into fantasy.espn.com (DevTools → Application → Cookies), then:
+
+- **Netlify**: set them as secret environment variables (scope:
+  Functions) and trigger a redeploy.
+- **Local**: `export ESPN_S2="..."` and `export SWID="{...}"` before
+  `python app.py`.
+
+If the app starts returning a 401 error again, the cookies have
+expired — grab fresh ones the same way.
