@@ -36,7 +36,10 @@ async function fetchLeague(leagueId, year, views, extraHeaders = {}) {
   if (ESPN_S2 && SWID) headers.cookie = `espn_s2=${ESPN_S2}; SWID=${SWID}`;
   const res = await fetch(url, { headers });
   if (res.status === 401) {
-    throw { status: 401, message: `League ${leagueId} is private; espn_s2 and SWID are required` };
+    const hint = headers.cookie
+      ? "credentials are configured but ESPN rejected them (expired? grab fresh cookies)"
+      : "no ESPN_S2/SWID configured on the server";
+    throw { status: 401, message: `League ${leagueId} is private — ${hint}` };
   }
   if (res.status === 404) {
     throw { status: 404, message: `League ${leagueId} does not exist` };
