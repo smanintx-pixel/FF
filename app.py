@@ -1,6 +1,8 @@
+import json
 import os
 
 from espn_api.football import League
+from espn_api.football.constant import POSITION_MAP, PRO_TEAM_MAP
 from espn_api.requests.espn_requests import (
     ESPNAccessDenied,
     ESPNInvalidLeague,
@@ -19,8 +21,41 @@ _league_cache = {}
 def get_league(league_id: int, year: int) -> League:
     key = (league_id, year)
     if key not in _league_cache:
-        _league_cache[key] = League(league_id=league_id, year=year)
+        _league_cache[key] = League(
+            league_id=league_id,
+            year=year,
+            espn_s2=os.environ.get("ESPN_S2"),
+            swid=os.environ.get("SWID"),
+        )
     return _league_cache[key]
+
+
+def _team_display_name(data: dict) -> str:
+    name = data.get("name")
+    if name:
+        return name
+    return f"{data.get('location', 'Unknown')} {data.get('nickname', 'Unknown')}"
+
+
+def _player_position(player: dict) -> str:
+    for slot in player.get("eligibleSlots", []):
+        name = POSITION_MAP.get(slot, "")
+        if slot != 25 and "/" not in name:
+            return name
+    return ""
+
+
+def _season_total(player: dict, year: int, projected: bool) -> float:
+    source = 1 if projected else 0
+    for s in player.get("stats", []):
+        if (
+            s.get("seasonId") == year
+            and s.get("statSplitTypeId") != 2
+            and s.get("scoringPeriodId") == 0
+            and s.get("statSourceId") == source
+        ):
+            return round(s.get("appliedTotal", 0), 2)
+    return 0.0
 
 
 def parse_league_params():
@@ -139,6 +174,77 @@ def rosters():
             }
         )
     return jsonify(data)
+
+
+@app.route("/api/players")
+def players():
+    league_id, year = parse_league_params()
+    limit = min(request.args.get("limit", 300, type=int), 1000)
+    league = get_league(league_id, year)
+    filters = {
+        "players": {
+            "limit": limit,
+            "sortDraftRanks": {"sortPriority": 1, "sortAsc": True, "value": "STANDARD"},
+        }
+    }
+    data = league.espn_request.league_get(
+        params={"view": "kona_player_info"},
+        headers={"x-fantasy-filter": json.dumps(filters)},
+    )
+    result = []
+    for entry in data.get("players", []):
+        player = entry.get("player", entry)
+        ranks = player.get("draftRanksByRankType", {})
+        rank = (
+            ranks.get("STANDARD", {}).get("rank")
+            or ranks.get("PPR", {}).get("rank")
+            or 9999
+        )
+        result.append(
+            {
+                "player_id": player.get("id"),
+                "name": player.get("fullName", ""),
+                "position": _player_position(player),
+                "pro_team": PRO_TEAM_MAP.get(player.get("proTeamId"), "None"),
+                "rank": rank,
+                "adp": round(
+                    player.get("ownership", {}).get("averageDraftPosition", 0), 1
+                ),
+                "projected_points": _season_total(player, year, projected=True),
+                "injury_status": player.get("injuryStatus", ""),
+            }
+        )
+    result.sort(key=lambda p: p["rank"])
+    return jsonify(result)
+
+
+@app.route("/api/draft")
+def draft():
+    league_id, year = parse_league_params()
+    league = get_league(league_id, year)
+    data = league.espn_request.league_get(params={"view": ["mDraftDetail", "mTeam"]})
+    names = {t["id"]: _team_display_name(t) for t in data.get("teams", [])}
+    detail = data.get("draftDetail", {})
+    picks = [
+        {
+            "player_id": p.get("playerId"),
+            "team_id": p.get("teamId"),
+            "team_name": names.get(p.get("teamId"), f"Team {p.get('teamId')}"),
+            "round": p.get("roundId"),
+            "round_pick": p.get("roundPickNumber"),
+            "overall": p.get("overallPickNumber"),
+            "keeper": p.get("keeper", False),
+        }
+        for p in detail.get("picks", [])
+    ]
+    return jsonify(
+        {
+            "drafted": detail.get("drafted", False),
+            "in_progress": bool(picks) and not detail.get("drafted", False),
+            "teams": names,
+            "picks": picks,
+        }
+    )
 
 
 if __name__ == "__main__":

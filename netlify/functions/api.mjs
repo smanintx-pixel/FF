@@ -26,12 +26,15 @@ function json(body, status = 200) {
   });
 }
 
-async function fetchLeague(leagueId, year, views) {
+async function fetchLeague(leagueId, year, views, extraHeaders = {}) {
   const url = new URL(
     `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}/segments/0/leagues/${leagueId}`
   );
   for (const view of views) url.searchParams.append("view", view);
-  const res = await fetch(url);
+  const headers = { ...extraHeaders };
+  const { ESPN_S2, SWID } = process.env;
+  if (ESPN_S2 && SWID) headers.cookie = `espn_s2=${ESPN_S2}; SWID=${SWID}`;
+  const res = await fetch(url, { headers });
   if (res.status === 401) {
     throw { status: 401, message: `League ${leagueId} is private; espn_s2 and SWID are required` };
   }
@@ -137,6 +140,48 @@ function mapRosters(data, year, teamId) {
   }));
 }
 
+function draftRank(player) {
+  const ranks = player.draftRanksByRankType ?? {};
+  return ranks.STANDARD?.rank ?? ranks.PPR?.rank ?? 9999;
+}
+
+function mapPlayers(data, year) {
+  return (data.players ?? [])
+    .map((entry) => {
+      const player = entry.player ?? entry;
+      return {
+        player_id: player.id,
+        name: player.fullName ?? "",
+        position: playerPosition(player),
+        pro_team: PRO_TEAM_MAP[player.proTeamId] ?? "None",
+        rank: draftRank(player),
+        adp: Math.round((player.ownership?.averageDraftPosition ?? 0) * 10) / 10,
+        projected_points: seasonTotal(player, year, true),
+        injury_status: player.injuryStatus ?? "",
+      };
+    })
+    .sort((a, b) => a.rank - b.rank);
+}
+
+function mapDraft(data) {
+  const names = new Map((data.teams ?? []).map((t) => [t.id, teamName(t)]));
+  const detail = data.draftDetail ?? {};
+  return {
+    drafted: detail.drafted ?? false,
+    in_progress: (detail.picks ?? []).length > 0 && !(detail.drafted ?? false),
+    teams: Object.fromEntries(names),
+    picks: (detail.picks ?? []).map((p) => ({
+      player_id: p.playerId,
+      team_id: p.teamId,
+      team_name: names.get(p.teamId) ?? `Team ${p.teamId}`,
+      round: p.roundId,
+      round_pick: p.roundPickNumber,
+      overall: p.overallPickNumber ?? null,
+      keeper: p.keeper ?? false,
+    })),
+  };
+}
+
 export default async function handler(request, context) {
   const url = new URL(request.url);
   const endpoint = context.params?.endpoint ?? url.pathname.split("/").pop();
@@ -172,6 +217,26 @@ export default async function handler(request, context) {
         const teamIdParam = url.searchParams.get("team_id");
         const teamId = teamIdParam === null ? null : parseInt(teamIdParam, 10);
         return json(mapRosters(data, year, teamId));
+      }
+      case "players": {
+        const limit = Math.min(
+          parseInt(url.searchParams.get("limit"), 10) || 300,
+          1000
+        );
+        const filter = {
+          players: {
+            limit,
+            sortDraftRanks: { sortPriority: 1, sortAsc: true, value: "STANDARD" },
+          },
+        };
+        const data = await fetchLeague(leagueId, year, ["kona_player_info"], {
+          "x-fantasy-filter": JSON.stringify(filter),
+        });
+        return json(mapPlayers(data, year));
+      }
+      case "draft": {
+        const data = await fetchLeague(leagueId, year, ["mDraftDetail", "mTeam"]);
+        return json(mapDraft(data));
       }
       default:
         return json({ error: `Unknown endpoint: ${endpoint}` }, 404);

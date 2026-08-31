@@ -186,3 +186,108 @@ tr:last-child td {
 .injured {
   color: var(--loss);
 }
+
+.draft-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.draft-controls label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  color: var(--muted);
+  gap: 0.25rem;
+}
+
+.draft-controls .check-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: 0.5rem;
+}
+
+.draft-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-bottom: 0.6rem;
+}
+
+.draft-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .draft-grid { grid-template-columns: 1fr; }
+}
+
+.draft-main h2, .draft-side h2 {
+  font-size: 0.9rem;
+  margin: 0 0 0.6rem;
+}
+
+.pos-filters {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.pos-btn {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.pos-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.best-pick td {
+  background: rgba(79, 140, 255, 0.12);
+}
+
+.pick-list {
+  margin: 0 0 1.5rem;
+  padding-left: 1.4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem 0.6rem 2rem;
+  font-size: 0.85rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pick-list li {
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pick-list li:last-child { border-bottom: none; }
+
+.pick-list .pick-meta {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.pick-list .empty {
+  color: var(--muted);
+  border-bottom: none;
+  list-style: none;
+  margin-left: -1.2rem;
+}
+
+.pos-counts {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.75rem;
+  margin-left: 0.4rem;
+}
