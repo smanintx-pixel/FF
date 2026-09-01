@@ -29,31 +29,51 @@ function json(body, status = 200) {
   });
 }
 
-async function fetchLeagueBase(leagueId, year, views, extraHeaders = {}) {
-  const url = new URL(
-    `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}/segments/0/leagues/${leagueId}`
-  );
-  for (const view of views) url.searchParams.append("view", view);
+const DEFAULT_HOSTS = ["https://lm-api-reads.fantasy.espn.com"];
+// During live drafts the lm-api-reads replica can serve a stale pre-draft
+// snapshot; the primary host is fresher, so draft data tries it first.
+const DRAFT_HOSTS = [
+  "https://fantasy.espn.com",
+  "https://lm-api-reads.fantasy.espn.com",
+];
+
+async function fetchLeagueBase(leagueId, year, views, extraHeaders = {}, hosts = DEFAULT_HOSTS) {
   const headers = { ...extraHeaders };
   if (!headers.cookie) {
     const { ESPN_S2, SWID } = process.env;
     if (ESPN_S2 && SWID) headers.cookie = `espn_s2=${ESPN_S2}; SWID=${SWID}`;
   }
-  const res = await fetch(url, { headers });
-  if (res.status === 401) {
+  let lastStatus = 0;
+  for (const host of hosts) {
+    const url = new URL(
+      `${host}/apis/v3/games/ffl/seasons/${year}/segments/0/leagues/${leagueId}`
+    );
+    for (const view of views) url.searchParams.append("view", view);
+    url.searchParams.set("_", Date.now());
+    let res;
+    try {
+      res = await fetch(url, { headers });
+    } catch (err) {
+      lastStatus = -1;
+      continue;
+    }
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data) ? data[0] : data;
+    }
+    lastStatus = res.status;
+    if (res.status === 401 || res.status === 404) break;
+  }
+  if (lastStatus === 401) {
     const hint = headers.cookie
       ? "credentials are configured but ESPN rejected them (expired? grab fresh cookies)"
       : "no ESPN_S2/SWID configured on the server";
     throw { status: 401, message: `League ${leagueId} is private — ${hint}` };
   }
-  if (res.status === 404) {
+  if (lastStatus === 404) {
     throw { status: 404, message: `League ${leagueId} does not exist` };
   }
-  if (!res.ok) {
-    throw { status: 502, message: `ESPN returned an HTTP ${res.status}` };
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data[0] : data;
+  throw { status: 502, message: `ESPN returned an HTTP ${lastStatus}` };
 }
 
 function teamName(t) {
@@ -176,10 +196,12 @@ function mapDraft(data) {
   const detail = data.draftDetail ?? {};
   // Before the draft starts, ESPN pre-populates every slot as a
   // placeholder pick with playerId -1 (or 0); only count real picks.
-  const picks = (detail.picks ?? []).filter((p) => (p.playerId ?? 0) > 0);
+  const rawPicks = detail.picks ?? [];
+  const picks = rawPicks.filter((p) => (p.playerId ?? 0) > 0);
   return {
     drafted: detail.drafted ?? false,
     in_progress: picks.length > 0 && !(detail.drafted ?? false),
+    total_slots: rawPicks.length,
     teams: Object.fromEntries(names),
     picks: picks.map((p) => ({
       player_id: p.playerId,
@@ -256,7 +278,13 @@ export default async function handler(request, context) {
         return json(mapPlayers(data, year));
       }
       case "draft": {
-        const data = await fetchLeague(leagueId, year, ["mDraftDetail", "mTeam"]);
+        const data = await fetchLeagueBase(
+          leagueId,
+          year,
+          ["mDraftDetail", "mTeam"],
+          { ...creds },
+          DRAFT_HOSTS
+        );
         return json(mapDraft(data));
       }
       default:

@@ -245,7 +245,9 @@ async function refreshDraft() {
   if (draft.drafted) {
     status.textContent = `Draft complete — ${draft.picks.length} picks. Updated ${when}`;
   } else if (draft.picks.length > 0) {
-    status.textContent = `${draft.picks.length} picks made. Updated ${when}`;
+    status.textContent = `${draft.picks.length} of ${draft.total_slots || "?"} picks made. Updated ${when}`;
+  } else if (draft.total_slots > 0) {
+    status.textContent = `ESPN's API reports 0 of ${draft.total_slots} picks completed — waiting (their draft feed can lag the draft room). Updated ${when}`;
   } else {
     status.textContent = `Waiting for draft to start. Updated ${when}`;
   }
