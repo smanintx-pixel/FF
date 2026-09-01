@@ -42,8 +42,9 @@ Both backends read the `ESPN_S2` and `SWID` environment variables and
 send them as cookies to ESPN. Get the values from your browser while
 logged into fantasy.espn.com (DevTools → Application → Cookies), then:
 
-- **Netlify**: set them as secret environment variables (scope:
-  Functions) and trigger a redeploy.
+- **Netlify**: set them as environment variables and trigger a
+  redeploy — functions read env vars at deploy time, so changes only
+  take effect on the next deploy.
 - **Local**: `export ESPN_S2="..."` and `export SWID="{...}"` before
   `python app.py`.
 
