@@ -43,13 +43,14 @@ async function apiGet(path, params = {}) {
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   }
+  url.searchParams.set("_t", Date.now());
   const headers = {};
   const creds = getCreds();
   if (creds.s2 && creds.swid) {
     headers["x-espn-s2"] = creds.s2;
     headers["x-swid"] = creds.swid;
   }
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, cache: "no-store" });
   const body = await res.json();
   if (!res.ok) {
     throw new Error(body.error || `Request failed (${res.status})`);

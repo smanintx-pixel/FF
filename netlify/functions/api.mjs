@@ -22,7 +22,10 @@ const POSITION_MAP = {
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store, must-revalidate",
+    },
   });
 }
 
