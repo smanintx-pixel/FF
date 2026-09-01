@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fantasy Football Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Fantasy Football Dashboard</h1>
+    <form id="league-form">
+      <label>League ID <input type="number" id="league-id" value="1676746"></label>
+      <label>Year <input type="number" id="year" value="2026"></label>
+      <button type="submit">Load</button>
+      <button type="button" id="settings-toggle">ESPN Login</button>
+    </form>
+  </header>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <p class="settings-hint">
+      For private leagues: while logged in at fantasy.espn.com, open DevTools
+      (F12) → Application → Cookies → fantasy.espn.com, then copy these two
+      values. They are stored only in this browser and sent directly with
+      your requests — never saved on the server.
+    </p>
+    <label>espn_s2 <input type="password" id="espn-s2" autocomplete="off"></label>
+    <label>SWID <input type="password" id="espn-swid" autocomplete="off" placeholder="{...}"></label>
+    <div class="settings-actions">
+      <button id="creds-save">Save &amp; reload</button>
+      <button id="creds-clear">Clear</button>
+      <span id="creds-status" class="settings-hint"></span>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="standings">Standings</button>
+    <button class="tab-btn" data-tab="matchups">Matchups</button>
+    <button class="tab-btn" data-tab="rosters">Rosters</button>
+    <button class="tab-btn" data-tab="draft">Draft</button>
+  </nav>
+
+  <main>
+    <div id="error" class="error hidden"></div>
+
+    <section id="tab-standings" class="tab-panel active">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Team</th><th>W</th><th>L</th><th>T</th>
+            <th>PF</th><th>PA</th><th>Streak</th>
+          </tr>
+        </thead>
+        <tbody id="standings-body"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-matchups" class="tab-panel">
+      <div class="week-picker">
+        <label>Week <input type="number" id="week" min="1" max="18"></label>
+        <button id="week-load">Go</button>
+      </div>
+      <div id="matchups-list"></div>
+    </section>
+
+    <section id="tab-rosters" class="tab-panel">
+      <select id="team-select"></select>
+      <table>
+        <thead>
+          <tr>
+            <th>Slot</th><th>Player</th><th>Pos</th><th>Team</th>
+            <th>Status</th><th>Points</th><th>Proj</th>
+          </tr>
+        </thead>
+        <tbody id="roster-body"></tbody>
+      </table>
+    </section>
+    <section id="tab-draft" class="tab-panel">
+      <div class="draft-controls">
+        <label>My team
+          <select id="draft-team-select"></select>
+        </label>
+        <label class="check-label">
+          <input type="checkbox" id="draft-autorefresh" checked>
+          Auto-refresh (10s)
+        </label>
+        <button id="draft-refresh">Refresh now</button>
+        <span id="draft-status" class="draft-status"></span>
+      </div>
+
+      <div class="draft-grid">
+        <div class="draft-main">
+          <div class="pos-filters" id="pos-filters">
+            <button class="pos-btn active" data-pos="ALL">All</button>
+            <button class="pos-btn" data-pos="QB">QB</button>
+            <button class="pos-btn" data-pos="RB">RB</button>
+            <button class="pos-btn" data-pos="WR">WR</button>
+            <button class="pos-btn" data-pos="TE">TE</button>
+            <button class="pos-btn" data-pos="D/ST">D/ST</button>
+            <button class="pos-btn" data-pos="K">K</button>
+          </div>
+          <h2>Best available</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th><th>Player</th><th>Pos</th><th>Team</th>
+                <th>Proj</th><th>ADP</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="available-body"></tbody>
+          </table>
+        </div>
+        <aside class="draft-side">
+          <h2>Draft plan</h2>
+          <div id="plan-panel" class="plan-panel"></div>
+          <h2>My picks <span id="my-pos-counts" class="pos-counts"></span></h2>
+          <ol id="my-picks" class="pick-list"></ol>
+          <h2>Recent picks</h2>
+          <ol id="recent-picks" class="pick-list" reversed></ol>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
