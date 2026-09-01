@@ -38,7 +38,12 @@ const DRAFT_HOSTS = [
 ];
 
 async function fetchLeagueBase(leagueId, year, views, extraHeaders = {}, hosts = DEFAULT_HOSTS) {
-  const headers = { ...extraHeaders };
+  const headers = {
+    accept: "application/json",
+    "x-fantasy-source": "kona",
+    "x-fantasy-platform": "kona-PROD",
+    ...extraHeaders,
+  };
   if (!headers.cookie) {
     const { ESPN_S2, SWID } = process.env;
     if (ESPN_S2 && SWID) headers.cookie = `espn_s2=${ESPN_S2}; SWID=${SWID}`;
