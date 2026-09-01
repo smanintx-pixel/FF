@@ -300,7 +300,11 @@ function startDraftPolling() {
       const draft = await refreshDraft();
       if (draft.drafted) stopDraftPolling();
     } catch (err) {
-      // keep polling; transient errors show on manual refresh
+      document.getElementById("draft-status").textContent =
+        `⚠ ${err.message} — retrying in 10s`;
+      if (/private/i.test(err.message)) {
+        document.getElementById("settings-panel").classList.remove("hidden");
+      }
     }
   }, 10000);
 }
