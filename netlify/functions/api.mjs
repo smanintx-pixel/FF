@@ -58,7 +58,15 @@ async function fetchLeagueBase(leagueId, year, views, extraHeaders = {}, hosts =
       continue;
     }
     if (res.ok) {
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        // Host answered 200 with an HTML page (login shell), not JSON —
+        // treat as a failed host and fall through to the next one.
+        lastStatus = -2;
+        continue;
+      }
       return Array.isArray(data) ? data[0] : data;
     }
     lastStatus = res.status;
