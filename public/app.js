@@ -136,8 +136,30 @@ async function loadRoster(teamId) {
   const data = await apiGet("/api/rosters", { team_id: teamId });
   const body = document.getElementById("roster-body");
   body.innerHTML = "";
-  if (data.length === 0) return;
-  data[0].roster.forEach((p) => {
+  let roster = data.length ? data[0].roster : [];
+  if (roster.length === 0) {
+    // ESPN's roster view lags during drafts; rebuild from draft picks.
+    try {
+      await loadPlayers();
+      const draft = await apiGet("/api/draft");
+      const idNum = parseInt(teamId, 10);
+      roster = draft.picks
+        .filter((p) => p.team_id === idNum)
+        .map((p) => {
+          const pl = state.playersById.get(p.player_id);
+          return {
+            lineup_slot: `R${p.round}.${p.round_pick}`,
+            name: pl ? pl.name : `Player #${p.player_id}`,
+            position: pl ? pl.position : "",
+            pro_team: pl ? pl.pro_team : "",
+            injury_status: pl ? pl.injury_status : "",
+            points: 0,
+            projected_points: pl ? pl.projected_points : 0,
+          };
+        });
+    } catch (err) {}
+  }
+  roster.forEach((p) => {
     const tr = document.createElement("tr");
     const statusClass = p.injury_status && p.injury_status !== "ACTIVE" ? "injured" : "";
     tr.innerHTML = `
@@ -151,6 +173,9 @@ async function loadRoster(teamId) {
     `;
     body.appendChild(tr);
   });
+  if (roster.length === 0) {
+    body.innerHTML = '<tr><td colspan="7">No players yet — roster fills in as the draft progresses.</td></tr>';
+  }
 }
 
 async function loadPlayers() {
